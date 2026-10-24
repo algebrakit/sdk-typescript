@@ -7,8 +7,14 @@ import { AxiosError } from 'axios';
  */
 export function handleApiError(error: AxiosError): string {
   if (error.response) {
-    // Server responded with a status code outside the 2xx range
-    return `API Error: ${error.response.status} - ${error.response.data}`;
+    // Server responded with a status code outside the 2xx range.
+    // The response body is usually a parsed object, so serialize it
+    // instead of letting it coerce to "[object Object]".
+    const body =
+      typeof error.response.data === 'string'
+        ? error.response.data
+        : JSON.stringify(error.response.data);
+    return `API Error: ${error.response.status} - ${body}`;
   } else if (error.request) {
     // Request was made but no response was received
     return 'API Error: No response received from the server.';
