@@ -1,6 +1,6 @@
 {
   "name": "@algebrakit/sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Official TypeScript/Node.js SDK for the Algebrakit Webservice API. Create sessions, retrieve scores, lock/unlock sessions, and fetch session info.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,11 +40,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/algebrakit-org/sdk-typescript.git"
+    "url": "git+https://github.com/algebrakit/sdk-typescript.git"
   },
-  "homepage": "https://github.com/algebrakit-org/sdk-typescript#readme",
+  "homepage": "https://github.com/algebrakit/sdk-typescript#readme",
   "bugs": {
-    "url": "https://github.com/algebrakit-org/sdk-typescript/issues"
+    "url": "https://github.com/algebrakit/sdk-typescript/issues"
   },
   "engines": {
     "node": ">=18"
