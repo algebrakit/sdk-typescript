@@ -9,43 +9,79 @@ import {
   SessionInfoRequest,
   SessionInfoResponse,
   SessionRetrieveRequest,
-  ExerciseValidateRequest,
-  ExerciseInfoRequest,
-} from './types/ApiTypes';
-import {
   SessionRetrieveResponse,
+  ExerciseValidateRequest,
   ExerciseValidateResponse,
+  ExerciseInfoRequest,
   ExerciseInfoResponse,
 } from './types/ApiTypes';
+import { apiErrorMessage } from './utils/apiErrorMessage';
+
+/** The Algebrakit API in the default region (Ireland). */
+export const DEFAULT_BASE_URL = 'https://api.algebrakit.com';
+
+/** Options for creating an {@link ApiClient}. */
+export interface ApiClientOptions {
+  /** Your Algebrakit API key. Keep it on your server; never send it to the browser. */
+  apiKey: string;
+  /** Base URL of the Algebrakit API. Defaults to {@link DEFAULT_BASE_URL}. */
+  baseUrl?: string;
+  /** Request timeout in milliseconds. Defaults to 30000. */
+  timeout?: number;
+}
 
 /**
- * ApiClient is a wrapper around Axios to interact with the Algebrakit Webservice API.
+ * Client for the Algebrakit web service API.
+ *
+ * @example
+ * const client = new ApiClient({ apiKey: process.env.ALGEBRAKIT_API_KEY! });
  */
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
   /**
-   * Initialize the API client with a base URL and API key.
-   * @param baseUrl The base URL of the Algebrakit Webservice API.
-   * @param apiKey The API key for authentication.
+   * Creates a client for the Algebrakit API.
+   * @param options The API key and, optionally, the base URL and timeout.
    */
-  constructor(private baseUrl: string, private apiKey: string) {
+  constructor(options: ApiClientOptions);
+  /**
+   * Creates a client for the Algebrakit API.
+   * @param baseUrl The base URL of the Algebrakit API, for example {@link DEFAULT_BASE_URL}.
+   * @param apiKey Your Algebrakit API key.
+   */
+  constructor(baseUrl: string, apiKey: string);
+  constructor(optionsOrBaseUrl: ApiClientOptions | string, apiKey?: string) {
+    const options: ApiClientOptions =
+      typeof optionsOrBaseUrl === 'string' ? { baseUrl: optionsOrBaseUrl, apiKey: apiKey ?? '' } : optionsOrBaseUrl;
+
     this.axiosInstance = axios.create({
-      baseURL: baseUrl,
+      baseURL: options.baseUrl ?? DEFAULT_BASE_URL,
+      timeout: options.timeout ?? 30000,
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey
+        'x-api-key': options.apiKey,
       },
+    });
+
+    // Put the API's own error message in the error, for example
+    // "Algebrakit API error 401: Could not validate credentials: the provided api-key is not valid"
+    this.axiosInstance.interceptors.response.use(undefined, (error: unknown) => {
+      if (axios.isAxiosError(error) && error.response) {
+        error.message = `Algebrakit API error ${error.response.status}: ${apiErrorMessage(error.response.data)}`;
+      }
+      return Promise.reject(error);
     });
   }
 
   /**
    * Create new exercise sessions.
-   * @param request The request payload for creating sessions.
-   * @returns The response containing session creation results.
+   * @param request The exercises to create sessions for. `apiVersion` defaults to 2.
+   * @returns For each exercise, whether it succeeded and the created sessions.
    */
   public async createSession(request: CreateSessionRequest): Promise<CreateSessionResponse> {
-    return this.axiosInstance.post<CreateSessionResponse>('/session/create', request).then(r => r.data);
+    return this.axiosInstance
+      .post<CreateSessionResponse>('/session/create', { apiVersion: 2, ...request })
+      .then(r => r.data);
   }
 
   /**
