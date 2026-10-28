@@ -1,142 +1,140 @@
-# Algebrakit Webservice API SDK
+# Algebrakit SDK for Node.js and TypeScript
 
-Official Node.js/TypeScript SDK for the Algebrakit Webservice API. It provides methods for creating sessions, retrieving scores, locking/unlocking sessions, and fetching session information.
+[![npm](https://img.shields.io/npm/v/@algebrakit/sdk)](https://www.npmjs.com/package/@algebrakit/sdk)
+[![CI](https://github.com/algebrakit/sdk-typescript/actions/workflows/ci.yml/badge.svg)](https://github.com/algebrakit/sdk-typescript/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Installation
+The official server-side SDK for the [Algebrakit](https://algebrakit.com) API. Your server uses it to create exercise sessions, get scores and manage sessions. Students then work on the exercises in your web page, through the Algebrakit widget.
+
+For how Algebrakit works, the full API reference and the widget's options, see the [Algebrakit documentation](https://docs.algebrakit.com/).
+
+> **Want to see it working first?** [algebrakit-examples](https://github.com/algebrakit/algebrakit-examples/tree/main/minimal/typescript) has a small web app built on this SDK that runs on localhost in a few minutes.
+
+## Before you start
+
+- Node.js 18 or newer.
+- An Algebrakit API key. Don't have one yet? [Contact Algebrakit](https://algebrakit.com/contact-us).
+
+Keep the API key on your server. Never send it to the browser.
+
+## Install
 
 ```bash
 npm install @algebrakit/sdk
 ```
 
-Requires Node.js 18 or newer.
+## Quick start
 
-## Usage
-
-### Initialize the API Client
+Create a client and a session for an exercise:
 
 ```typescript
 import { ApiClient } from '@algebrakit/sdk';
 
-const apiClient = new ApiClient('https://api.algebrakit.com', 'your-api-key');
+const client = new ApiClient({ apiKey: process.env.ALGEBRAKIT_API_KEY! });
+
+const [result] = await client.createSession({
+  exercises: [{ exerciseId: 'fa42e943-8213-41a6-8a91-8c22a929ffe9' }],
+});
+const sessionId = result.sessions[0].sessionId;
 ```
 
-### Create a Session
+A session holds one student's work on one exercise. Store its ID with the student, so they can continue later and you can get their score.
+
+### Show the session to a student
+
+In your web page, the Algebrakit widget shows the session:
+
+```html
+<script>
+  AlgebraKIT = { config: { proxy: { url: '/proxy/algebrakit' } } };
+</script>
+<script src="https://widgets.algebrakit.com"></script>
+
+<akit-exercise session-id="SESSION_ID"></akit-exercise>
+```
+
+The widget sends its API calls to `/proxy/algebrakit/*` on your server. Your server adds the API key and forwards them to the Algebrakit API. The [minimal TypeScript example](https://github.com/algebrakit/algebrakit-examples/tree/main/minimal/typescript) implements all of this; for production, see [Proxy setup](https://docs.algebrakit.com/pages/420-proxy-setup/).
+
+## API
+
+Every method takes one request object and returns a promise. The request and response types are exported, for example `CreateSessionRequest` and `SessionScoreResponse`.
+
+| Method | Endpoint | What it does |
+|---|---|---|
+| `createSession` | `POST /session/create` | Create sessions for one or more exercises: by `exerciseId`, by `exerciseSpec` (an exercise defined in code) or by `sessionId` (a copy of an existing session's exercise) |
+| `getSessionScore` | `POST /session/score` | Get a session's score, and optionally lock it |
+| `getSessionInfo` | `POST /session/info` | Get a session's details: its elements, the student's work and the scoring |
+| `lockSession` | `POST /sessions/lock` | `LOCK`, `UNLOCK` or `FINALIZE` sessions |
+| `retrieveSession` | `POST /session/retrieve` | Get existing sessions by ID |
+| `validateExercise` | `POST /exercise/validate` | Check an exercise ID or specification before you use it |
+| `getExercisePublishedInfo` | `POST /exercise/published-info` | Get the published versions and structure of an exercise |
+
+### Get the score
 
 ```typescript
-import { CreateSessionRequest } from '@algebrakit/sdk';
+const { scoring } = await client.getSessionScore({ sessionId, lockSession: true });
+console.log(`${scoring.marksEarned} of ${scoring.marksTotal} marks`);
+```
 
-const request: CreateSessionRequest = {
-  exercises: [
-    { exerciseId: 'fa42e943-8213-41a6-8a91-8c22a929ffe9', version: 'latest' },
-  ],
-  apiVersion: 2,
-};
+### Lock a session
 
-apiClient.createSession(request).then(response => {
-  console.log('Session created:', response);
-}).catch(error => {
-  console.error('Error creating session:', error);
+```typescript
+await client.lockSession({ action: 'LOCK', sessionIds: [sessionId] });
+```
+
+## Configuration
+
+```typescript
+const client = new ApiClient({
+  apiKey: process.env.ALGEBRAKIT_API_KEY!,
+  baseUrl: 'https://prod.api.sg-1.algebrakit.com', // optional, see the regions below
+  timeout: 10_000, // optional, in milliseconds; the default is 30000
 });
 ```
 
-### Retrieve Session Scores
+| Region | Base URL |
+|---|---|
+| EU (default) | `https://api.algebrakit.com` |
+| Singapore | `https://prod.api.sg-1.algebrakit.com` |
 
-```typescript
-import { SessionScoreRequest } from '@algebrakit/sdk';
+The older form `new ApiClient(baseUrl, apiKey)` still works.
 
-const request: SessionScoreRequest = {
-  sessionId: '0a405901-8b89-4665-9ea0-6dbdff3602fc',
-  lockSession: true,
-};
+## Error handling
 
-apiClient.getSessionScore(request).then(response => {
-  console.log('Session scores:', response);
-}).catch(error => {
-  console.error('Error retrieving scores:', error);
-});
-```
-
-### Lock or Unlock Sessions
-
-```typescript
-import { SessionLockRequest } from '@algebrakit/sdk';
-
-const request: SessionLockRequest = {
-  action: 'LOCK',
-  sessionIds: ['f2f62104-3b5a-4156-aeaf-291167e5f9e3'],
-};
-
-apiClient.lockSession(request).then(response => {
-  console.log('Session locked:', response);
-}).catch(error => {
-  console.error('Error locking session:', error);
-});
-```
-
-### Retrieve Session Information
-
-```typescript
-import { SessionInfoRequest } from '@algebrakit/sdk';
-
-const request: SessionInfoRequest = {
-  sessionId: '0a405901-8b89-4665-9ea0-6dbdff3602fc',
-};
-
-apiClient.getSessionInfo(request).then(response => {
-  console.log('Session info:', response);
-}).catch(error => {
-  console.error('Error retrieving session info:', error);
-});
-```
-
-## Running the Demos
-
-Each demo lives in its own folder under `demo/` with its own configuration.
-
-### CLI Demo (`demo/cli/`)
-
-Demonstrates SDK API calls with text output.
-
-1. Set up your API key:
-   ```bash
-   npm run demo:setup
-   # Then edit demo/cli/.env with your actual API key
-   ```
-
-2. Run the demo:
-   ```bash
-   npm run demo
-   ```
-
-### Web Demo (`demo/play-exercise/`)
-
-Renders a working Algebrakit exercise in the browser with learning event logging.
-
-1. Set up your API key:
-   ```bash
-   npm run play-exercise:setup
-   # Then edit demo/play-exercise/.env with your actual API key
-   ```
-
-2. Run the web demo:
-   ```bash
-   npm run play-exercise
-   ```
-
-3. Open `http://localhost:3000` in your browser.
-
-## Error Handling
-
-Use the `handleApiError` utility to standardize error messages:
+The methods throw when a request fails. `handleApiError` turns any error into a readable line:
 
 ```typescript
 import { handleApiError } from '@algebrakit/sdk';
 
-apiClient.createSession(request).catch(error => {
+try {
+  await client.getSessionInfo({ sessionId });
+} catch (error) {
   console.error(handleApiError(error));
-});
+  // API Error: 401 - Could not validate credentials: the provided api-key is not valid
+}
 ```
+
+The thrown error is an [`AxiosError`](https://axios-http.com/docs/handling_errors), so `error.response.status` and `error.response.data` are available too.
+
+## More
+
+- [algebrakit-examples](https://github.com/algebrakit/algebrakit-examples): runnable examples in TypeScript, PHP and .NET
+- [Documentation](https://docs.algebrakit.com/): [SDKs](https://docs.algebrakit.com/pages/320-SDK/), [API reference](https://docs.algebrakit.com/pages/310-API/), [web components](https://docs.algebrakit.com/pages/410-webcomponents/) and [learning events](https://docs.algebrakit.com/pages/450-learning-events/)
+- [OpenAPI specification](https://api.algebrakit.com/openapi/yaml)
+- SDKs for other languages: [PHP](https://github.com/algebrakit/sdk-php) and [.NET](https://github.com/algebrakit/sdk-dotnet)
+- A tour of every API call: [`demo/cli`](demo/cli/demo.ts). Run `npm run demo:setup`, add your API key to `demo/cli/.env`, then run `npm run demo`.
+
+## Development
+
+```bash
+npm install
+npm test            # unit tests, no API key needed
+npm run typecheck
+npm run build
+```
+
+To release: update the version in `package.json` and [CHANGELOG.md](CHANGELOG.md), then push a tag such as `v1.1.0`. GitHub Actions tests the package, publishes it to npm and creates a GitHub release.
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)

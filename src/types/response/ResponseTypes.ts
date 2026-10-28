@@ -17,6 +17,7 @@ export interface SessionLockResponse {}
 
 export interface SessionInfoResponse {
   success?: boolean;
+  /** When the session was created, as a Unix timestamp in seconds. */
   creationTimestamp?: number;
   elements: Array<ElementInfo>;
   tagDescriptions: Record<string, TagDescription>;

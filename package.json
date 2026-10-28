@@ -1,7 +1,7 @@
 {
   "name": "@algebrakit/sdk",
-  "version": "1.0.2",
-  "description": "Official TypeScript/Node.js SDK for the Algebrakit Webservice API. Create sessions, retrieve scores, lock/unlock sessions, and fetch session info.",
+  "version": "1.1.0",
+  "description": "Official Node.js and TypeScript SDK for the Algebrakit API: create exercise sessions, get scores and session info, lock sessions and validate exercises.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -18,23 +18,22 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "predemo": "npm run build",
-    "demo": "ts-node demo/cli/demo.ts",
-    "demo:setup": "cd demo/cli && cp .env.example .env && echo 'Please edit demo/cli/.env with your API key'",
-    "preplay-exercise": "npm run build",
-    "play-exercise": "ts-node demo/play-exercise/play-exercise.ts",
-    "play-exercise:setup": "cd demo/play-exercise && cp .env.example .env && echo 'Please edit demo/play-exercise/.env with your API key'"
+    "typecheck": "tsc -p tsconfig.check.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "demo": "tsx demo/cli/demo.ts",
+    "demo:setup": "cd demo/cli && cp .env.example .env && echo 'Now add your API key to demo/cli/.env'"
   },
   "keywords": [
     "algebrakit",
     "sdk",
+    "api-client",
     "math",
     "education",
+    "edtech",
     "exercises",
-    "api-client",
-    "typescript"
+    "typescript",
+    "nodejs"
   ],
   "author": "Algebrakit",
   "license": "MIT",
@@ -53,14 +52,12 @@
     "access": "public"
   },
   "dependencies": {
-    "axios": "^1.9.0"
+    "axios": "^1.20.0"
   },
   "devDependencies": {
-    "@types/http-proxy": "^1.17.17",
     "@types/node": "^22.15.17",
     "dotenv": "^17.3.1",
-    "http-proxy": "^1.18.1",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3"
   }
 }
